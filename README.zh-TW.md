@@ -6,9 +6,9 @@
 
 [English](README.md) | **繁體中文**
 
-為 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)（Anthropic 的 CLI 工具）打造的即時狀態列——把空白的底部變成一目了然的 session 儀表板。
+為 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)（Anthropic 的 CLI 工具）打造的即時狀態列，支援 **macOS、Linux 與 Windows**。
 
-模型名稱、上下文用量漸層進度條、花費、經過時間、Git 分支、速率限制……所有你在寫程式時需要用餘光掃到的資訊。
+把空白的底部變成一目了然的 session 儀表板：模型名稱、上下文用量漸層進度條、花費、經過時間、Git 分支、速率限制……所有你在寫程式時需要用餘光掃到的資訊。
 
 ## 預覽
 
@@ -41,18 +41,21 @@
 | **上下文視窗大小** | 顯示 `1M` 或 `200k`，但如果模型名稱已包含此資訊則不重複。 |
 | **品牌識別** | `◆` 菱形，用 Anthropic 品牌紫 (#7266EA) 上色。 |
 | **三層渲染退回** | 真彩色 → ANSI → ASCII。任何終端機都能用。 |
-| **Nerd Font 支援** | 選配：``, `󰔟`, `` 圖示。設定 `CLAUDE_STATUSLINE_NERDFONT=1`。 |
-| **Powerline 分隔符** | 選配：`` 箭頭。設定 `CLAUDE_STATUSLINE_POWERLINE=1`。 |
+| **Nerd Font 支援** | 選配圖示。設定 `CLAUDE_STATUSLINE_NERDFONT=1`。 |
+| **Powerline 分隔符** | 選配箭頭。設定 `CLAUDE_STATUSLINE_POWERLINE=1`。 |
 | **< 50ms** | 單次 `jq` 呼叫 + Git 快取。無感延遲。 |
+| **Windows 支援** | 原生 PowerShell 腳本（`statusline.ps1`），完整 ANSI 彩色支援。 |
 
 ## 安裝
 
-### 前置條件
+### macOS / Linux
+
+#### 前置條件
 
 - 已安裝 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - `jq` — 用 `brew install jq`（macOS）或 `apt install jq`（Linux）安裝
 
-### 快速安裝
+#### 快速安裝
 
 ```bash
 git clone https://github.com/kcchien/claude-code-statusline.git
@@ -60,15 +63,15 @@ cd claude-code-statusline
 ./install.sh
 ```
 
-### 手動安裝
+#### 手動安裝
 
 ```bash
 # 1. 複製腳本
 cp statusline.sh ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
-
-# 2. 編輯 ~/.claude/settings.json，加入：
 ```
+
+編輯 `~/.claude/settings.json`，加入：
 
 ```json
 {
@@ -82,9 +85,95 @@ chmod +x ~/.claude/statusline.sh
 
 重啟 Claude Code 即可。狀態列會在第一次互動後出現。
 
+---
+
+### Windows
+
+#### 前置條件
+
+- 已安裝 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+- PowerShell 5.1+（Windows 10/11 內建）或 [PowerShell 7+](https://github.com/PowerShell/PowerShell/releases)
+- [Windows Terminal](https://aka.ms/terminal)（建議使用，色彩支援最佳）
+- `jq` — 選擇一種方式安裝：
+  ```powershell
+  winget install jqlang.jq   # Windows Package Manager（建議）
+  scoop install jq           # Scoop
+  choco install jq           # Chocolatey
+  ```
+
+#### 快速安裝（PowerShell）
+
+```powershell
+git clone https://github.com/kcchien/claude-code-statusline.git
+cd claude-code-statusline
+.\install.ps1
+```
+
+#### 一鍵安裝
+
+```powershell
+irm https://raw.githubusercontent.com/kcchien/claude-code-statusline/main/install.ps1 | iex
+```
+
+#### 手動安裝（Windows）
+
+```powershell
+# 1. 建立 .claude 目錄（如果不存在）
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude"
+
+# 2. 複製腳本
+Copy-Item statusline.ps1 "$env:USERPROFILE\.claude\statusline.ps1"
+
+# 3. 允許腳本執行（只需執行一次）
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+編輯 `%USERPROFILE%\.claude\settings.json`，加入：
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\statusline.ps1\"",
+    "timeout": 10
+  }
+}
+```
+
+重啟 Claude Code 即可。狀態列會在第一次互動後出現。
+
+#### Windows 使用技巧
+
+- **最佳色彩效果**：使用 [Windows Terminal](https://aka.ms/terminal)，原生支援真彩色（24-bit）漸層。
+- **啟用漸層進度條**：設定 `COLORTERM` 環境變數：
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("COLORTERM", "truecolor", "User")
+  ```
+  設定後重新開啟終端機即可生效。
+- **Nerd Font 圖示**：在 Windows Terminal 安裝 [Nerd Font](https://www.nerdfonts.com/) 字型後：
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("CLAUDE_STATUSLINE_NERDFONT", "1", "User")
+  ```
+- **執行原則錯誤**：若出現「無法載入」的錯誤訊息，執行：
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+
+---
+
 ## 設定
 
-所有設定透過環境變數控制。加到 `~/.zshrc` 或 `~/.bashrc`：
+所有設定透過環境變數控制。
+
+**macOS/Linux** — 加到 `~/.zshrc` 或 `~/.bashrc`：
+```bash
+export CLAUDE_STATUSLINE_NERDFONT=1
+```
+
+**Windows** — 透過 PowerShell 設定（永久生效）：
+```powershell
+[System.Environment]::SetEnvironmentVariable("CLAUDE_STATUSLINE_NERDFONT", "1", "User")
+```
 
 | 變數 | 預設值 | 說明 |
 |------|--------|------|
@@ -93,11 +182,6 @@ chmod +x ~/.claude/statusline.sh
 | `CLAUDE_STATUSLINE_POWERLINE` | 跟隨 NERDFONT | 設為 `1` 啟用 Powerline 箭頭分隔符 |
 | `COLORTERM` | （系統自動） | `truecolor` 或 `24bit` 時啟用漸層進度條 |
 
-```bash
-# 範例：在 ~/.zshrc 中
-export CLAUDE_STATUSLINE_NERDFONT=1  # 啟用 Nerd Font 圖示 + Powerline 箭頭
-```
-
 ## 運作原理
 
 Claude Code 的 `statusLine` 機制會在每次助理回覆後，把完整的 session 狀態打包成 JSON，透過 stdin 送給你指定的腳本。
@@ -105,9 +189,9 @@ Claude Code 的 `statusLine` 機制會在每次助理回覆後，把完整的 se
 本腳本的處理流程：
 
 1. **單次 `jq` 呼叫**（~3ms）——一次解析全部 14 個欄位
-2. **Git 快取**（命中 ~0ms，重整 ~40ms）——髒標記結果快取在 `/tmp/`，5 秒更新一次
+2. **Git 快取**（命中 ~0ms，重整 ~40ms）——髒標記結果快取在 `/tmp/`（macOS/Linux）或 `%TEMP%`（Windows），5 秒更新一次
 3. **智慧組裝**——只有非零的區段才會出現在畫面上
-4. **`printf '%b'`**——最終解釋 ANSI 跳脫碼，輸出彩色結果
+4. **`printf '%b'` / `Write-Host`**——最終解釋 ANSI 跳脫碼，輸出彩色結果
 
 端到端耗時：**< 50ms**。
 
@@ -126,7 +210,7 @@ Claude Code 的 `statusLine` 機制會在每次助理回覆後，把完整的 se
 
 ## 測試
 
-執行測試腳本，可以看到所有顯示模式：
+**macOS/Linux：**
 
 ```bash
 chmod +x examples/test-mock.sh
@@ -136,7 +220,25 @@ chmod +x examples/test-mock.sh
 ./examples/test-mock.sh ascii    # ASCII 退回模式
 ```
 
-## Bash 3.2 相容性
+**Windows — 在 PowerShell 快速測試：**
+
+```powershell
+'{"model":{"display_name":"Claude Sonnet 4.5"},"context_window":{"used_percentage":42,"context_window_size":200000},"cost":{"total_cost_usd":1.23,"total_duration_ms":125000,"total_lines_added":50,"total_lines_removed":10},"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":15}},"workspace":{"current_dir":"C:/Users/you/project"},"worktree":{"branch":"main"}}' | powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\statusline.ps1"
+```
+
+## 平台比較
+
+| 功能 | macOS/Linux（`statusline.sh`） | Windows（`statusline.ps1`） |
+|------|--------------------------------|------------------------------|
+| 執行環境 | Bash 3.2+ | PowerShell 5.1+ |
+| 需要 `jq` | 是 | 是 |
+| 真彩色漸層 | 是（`COLORTERM=truecolor`） | 是（Windows Terminal 自動偵測） |
+| Git 髒標記 | 是 | 是 |
+| 快取位置 | `/tmp/claude-statusline-git-cache` | `%TEMP%\claude-statusline-git-cache.txt` |
+| Nerd Font 支援 | 是 | 是 |
+| Powerline 支援 | 是 | 是 |
+
+## Bash 3.2 相容性（macOS/Linux）
 
 本腳本針對 macOS 預設的 bash 3.2 設計。幾個關鍵的設計決策：
 

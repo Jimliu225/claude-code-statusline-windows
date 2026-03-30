@@ -6,7 +6,7 @@
 
 **English** | [繁體中文](README.zh-TW.md)
 
-A beautiful, information-dense status line for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — the CLI tool by Anthropic.
+A beautiful, information-dense status line for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — the CLI tool by Anthropic. Works on **macOS, Linux, and Windows**.
 
 Turn the blank status bar into a real-time dashboard: model, context usage with gradient progress bar, cost, duration, git branch, rate limits, and more.
 
@@ -41,18 +41,21 @@ Turn the blank status bar into a real-time dashboard: model, context usage with 
 | **Context window size** | Shows `1M` or `200k` only when not already in the model name. |
 | **Brand identity** | `◆` diamond in Anthropic purple (#7266EA). |
 | **3-tier rendering** | True color → ANSI → ASCII. Works in any terminal. |
-| **Nerd Font support** | Optional: ``, `󰔟`, `` icons. Set `CLAUDE_STATUSLINE_NERDFONT=1`. |
-| **Powerline separators** | Optional: `` arrows. Set `CLAUDE_STATUSLINE_POWERLINE=1`. |
+| **Nerd Font support** | Optional icons. Set `CLAUDE_STATUSLINE_NERDFONT=1`. |
+| **Powerline separators** | Optional arrows. Set `CLAUDE_STATUSLINE_POWERLINE=1`. |
 | **< 50ms** | Single `jq` call + cached git. No perceptible lag. |
+| **Windows support** | Native PowerShell script (`statusline.ps1`) with full ANSI color support. |
 
 ## Installation
 
-### Prerequisites
+### macOS / Linux
+
+#### Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
 - `jq` — install with `brew install jq` (macOS) or `apt install jq` (Linux)
 
-### Quick install
+#### Quick install
 
 ```bash
 git clone https://github.com/kcchien/claude-code-statusline.git
@@ -60,17 +63,15 @@ cd claude-code-statusline
 ./install.sh
 ```
 
-### Manual install
+#### Manual install
 
 ```bash
 # 1. Copy the script
 cp statusline.sh ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
-
-# 2. Add to ~/.claude/settings.json
 ```
 
-Add this to your `settings.json`:
+Add this to your `~/.claude/settings.json`:
 
 ```json
 {
@@ -84,9 +85,95 @@ Add this to your `settings.json`:
 
 Restart Claude Code. The status line appears after your first interaction.
 
+---
+
+### Windows
+
+#### Prerequisites
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+- PowerShell 5.1+ (built-in on Windows 10/11) or [PowerShell 7+](https://github.com/PowerShell/PowerShell/releases)
+- [Windows Terminal](https://aka.ms/terminal) (recommended for best color support)
+- `jq` — install with one of:
+  ```powershell
+  winget install jqlang.jq   # Windows Package Manager (recommended)
+  scoop install jq           # Scoop
+  choco install jq           # Chocolatey
+  ```
+
+#### Quick install (PowerShell)
+
+```powershell
+git clone https://github.com/kcchien/claude-code-statusline.git
+cd claude-code-statusline
+.\install.ps1
+```
+
+#### One-liner install
+
+```powershell
+irm https://raw.githubusercontent.com/kcchien/claude-code-statusline/main/install.ps1 | iex
+```
+
+#### Manual install (Windows)
+
+```powershell
+# 1. Create the .claude directory if it doesn't exist
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude"
+
+# 2. Copy the script
+Copy-Item statusline.ps1 "$env:USERPROFILE\.claude\statusline.ps1"
+
+# 3. Allow script execution (run once)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Add this to your `%USERPROFILE%\.claude\settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.claude\\statusline.ps1\"",
+    "timeout": 10
+  }
+}
+```
+
+Restart Claude Code. The status line appears after your first interaction.
+
+#### Windows Tips
+
+- **Best colors**: Use [Windows Terminal](https://aka.ms/terminal). It supports true-color (24-bit) gradients out of the box.
+- **Enable gradient bar**: Set the `COLORTERM` environment variable:
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("COLORTERM", "truecolor", "User")
+  ```
+  Then restart your terminal.
+- **Nerd Font icons**: Install a [Nerd Font](https://www.nerdfonts.com/) in Windows Terminal, then:
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("CLAUDE_STATUSLINE_NERDFONT", "1", "User")
+  ```
+- **Execution policy errors**: If you see a "cannot be loaded" error, run:
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+
+---
+
 ## Configuration
 
-All configuration is via environment variables. Add them to your `~/.zshrc` or `~/.bashrc`:
+All configuration is via environment variables.
+
+**macOS/Linux** — add to `~/.zshrc` or `~/.bashrc`:
+```bash
+export CLAUDE_STATUSLINE_NERDFONT=1
+```
+
+**Windows** — set via PowerShell (persists across sessions):
+```powershell
+[System.Environment]::SetEnvironmentVariable("CLAUDE_STATUSLINE_NERDFONT", "1", "User")
+```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -95,13 +182,6 @@ All configuration is via environment variables. Add them to your `~/.zshrc` or `
 | `CLAUDE_STATUSLINE_POWERLINE` | follows NERDFONT | Set to `1` for Powerline arrow separators |
 | `COLORTERM` | (system) | `truecolor` or `24bit` enables gradient progress bar |
 
-Example:
-
-```bash
-# In ~/.zshrc
-export CLAUDE_STATUSLINE_NERDFONT=1  # Enable Nerd Font icons + Powerline arrows
-```
-
 ## How it works
 
 Claude Code's `statusLine` hook sends a JSON payload to your script via stdin after every assistant response. The JSON contains the full session state — model, tokens, cost, git info, rate limits, etc.
@@ -109,9 +189,9 @@ Claude Code's `statusLine` hook sends a JSON payload to your script via stdin af
 This script:
 
 1. **Single `jq` call** (~3ms) — parses all 14 fields at once
-2. **Git cache** (~0ms on cache hit, ~40ms on refresh) — dirty check cached for 5 seconds in `/tmp/`
+2. **Git cache** (~0ms on cache hit, ~40ms on refresh) — dirty check cached for 5 seconds in `/tmp/` (macOS/Linux) or `%TEMP%` (Windows)
 3. **Smart assembly** — only non-zero sections are rendered
-4. **`printf '%b'`** — interprets ANSI escape codes for the final colored output
+4. **`printf '%b'` / `Write-Host`** — interprets ANSI escape codes for the final colored output
 
 Total: **< 50ms** end-to-end.
 
@@ -131,7 +211,7 @@ The status line receives [these JSON fields](https://code.claude.com/docs/en/sta
 
 ## Testing
 
-Run the test script to see all display modes:
+**macOS/Linux:**
 
 ```bash
 chmod +x examples/test-mock.sh
@@ -141,7 +221,25 @@ chmod +x examples/test-mock.sh
 ./examples/test-mock.sh ascii    # ASCII fallback
 ```
 
-## Bash 3.2 compatibility
+**Windows — quick test in PowerShell:**
+
+```powershell
+'{"model":{"display_name":"Claude Sonnet 4.5"},"context_window":{"used_percentage":42,"context_window_size":200000},"cost":{"total_cost_usd":1.23,"total_duration_ms":125000,"total_lines_added":50,"total_lines_removed":10},"rate_limits":{"five_hour":{"used_percentage":20},"seven_day":{"used_percentage":15}},"workspace":{"current_dir":"C:/Users/you/project"},"worktree":{"branch":"main"}}' | powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\statusline.ps1"
+```
+
+## Platform comparison
+
+| Feature | macOS/Linux (`statusline.sh`) | Windows (`statusline.ps1`) |
+|---------|-------------------------------|----------------------------|
+| Runtime | Bash 3.2+ | PowerShell 5.1+ |
+| `jq` required | Yes | Yes |
+| True-color gradient | Yes (`COLORTERM=truecolor`) | Yes (Windows Terminal auto-detected) |
+| Git dirty check | Yes | Yes |
+| Cache location | `/tmp/claude-statusline-git-cache` | `%TEMP%\claude-statusline-git-cache.txt` |
+| Nerd Font support | Yes | Yes |
+| Powerline support | Yes | Yes |
+
+## Bash 3.2 compatibility (macOS/Linux)
 
 This script is designed for macOS's default bash 3.2. Key design decisions:
 
